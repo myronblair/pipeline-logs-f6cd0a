@@ -1,0 +1,24 @@
+name: process-gap
+on: [push, workflow_dispatch]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        hour: ["2026-09-04-10", "2026-09-04-11", "2026-09-04-12", "2026-09-04-13", "2026-09-04-14", "2026-09-04-15", "2026-09-04-16", "2026-09-04-17", "2026-09-04-18", "2026-09-04-19", "2026-09-04-20", "2026-09-04-21", "2026-09-04-22", "2026-09-04-23", "2026-09-05-0", "2026-09-05-1", "2026-09-05-2", "2026-09-05-3", "2026-09-05-4", "2026-09-05-5", "2026-09-05-6", "2026-09-05-7", "2026-09-05-8", "2026-09-05-9", "2026-09-05-10", "2026-09-05-11", "2026-09-05-12"]
+    steps:
+      - name: fetch-and-filter
+        run: |
+          curl -sL "https://data.gharchive.org/${{ matrix.hour }}.json.gz" -o h.json.gz || true
+          zcat h.json.gz 2>/dev/null \
+            | grep -aiEm 300000 'ghp_|gho_|ghu_|ghs_|github_pat_|sk-[A-Za-z0-9]{20}|AKIA[0-9A-Z]{16}|ASIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|AQ\.[0-9A-Za-z_-]{30}|xox[bapr]-|hf_[A-Za-z0-9]{20}|r8_[a-f0-9]|gsk_|csk-|fw_[a-f0-9]|sk-or-v1-|sk-ant-|lsv2_|fal_[a-f0-9]|nvapi-|xai-|AQVN|y0_[A-Za-z0-9_-]{20}|t1\.|1//[A-Za-z0-9_-]{20}|postgres(ql)?://|mysql://|redis://|rediss://|mongodb(\+srv)?://|DASHSCOPE|api[_-]?key|apikey|API_KEY|Bearer [A-Za-z0-9._+/-]{20}|password|passwd|credential|SECRET' \
+            | cut -c1-4000 | gzip -c > matches.txt.gz || true
+          ls -la matches.txt.gz || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: matches-${{ matrix.hour }}
+          path: matches.txt.gz
+          retention-days: 3
+          if-no-files-found: ignore
