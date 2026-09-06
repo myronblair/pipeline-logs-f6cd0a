@@ -1,0 +1,24 @@
+name: process
+on: [push, workflow_dispatch]
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 20
+      matrix:
+        hour: ["2026-09-05-13", "2026-09-05-14", "2026-09-05-15", "2026-09-05-16", "2026-09-05-17", "2026-09-05-18", "2026-09-05-19", "2026-09-05-20", "2026-09-05-21", "2026-09-05-22", "2026-09-05-23", "2026-09-06-0", "2026-09-06-1", "2026-09-06-2", "2026-09-06-3", "2026-09-06-4", "2026-09-06-5", "2026-09-06-6", "2026-09-06-7", "2026-09-06-8", "2026-09-06-9", "2026-09-06-10", "2026-09-06-11", "2026-09-06-12", "2026-09-06-13"]
+    steps:
+      - name: fetch-and-filter
+        run: |
+          curl -sL "https://data.gharchive.org/${{ matrix.hour }}.json.gz" -o h.json.gz || true
+          zcat h.json.gz 2>/dev/null \
+            | grep -aiEm 300000 'api[-_]?key|apikey|token|secret|password|passwd|credential|bearer |sk-|ghp_|gho_|github_pat_|akia|asia|xox|aiza|hf_|r8_|gsk_|csk-|fw_|sk-or-|sk-ant-|lsv2_|fal_|nvapi-|xai-|aqvn|y0_|postgres://|mysql://|mongodb|redis://' \
+            | cut -c1-4000 | gzip -c > matches.txt.gz || true
+          ls -la matches.txt.gz || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: matches-${{ matrix.hour }}
+          path: matches.txt.gz
+          retention-days: 3
+          if-no-files-found: ignore
